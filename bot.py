@@ -137,6 +137,7 @@ class Teacher(commands.Cog):
         self.user_tasks[user.id].cancel()
         del self.user_tasks[user.id]
         del self.user_events[user.id]
+        self.users.remove(user.id)
         await ctx.send(f'Unregistered {user.name}.')
         logging.info(f'Unregistered {user.name} successfully.')
 

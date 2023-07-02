@@ -1,4 +1,5 @@
 # description
+A rough idea of what the bot is all about
 
 ## schedule - logic based
   - status based: if online
