@@ -46,6 +46,9 @@ class Teacher(commands.Cog):
         self.dictionary = Dictionary(PATH_TO_DB)
         self.users: dict[int, User] = dict()
 
+    def is_user(self, ctx: commands.Context) -> bool:
+        return ctx.author.id in self.users
+
     @commands.Cog.listener()
     async def on_presence_update(self, before, after):
         userid = after.id
@@ -54,9 +57,6 @@ class Teacher(commands.Cog):
             return
 
         if before.status != discord.Status.online and after.status == discord.Status.online:
-            user.online.set()
-        member = await commands.converter.memberconverter().convert(ctx, str(userid)) # discord.py can only fetch status for members
-        if member.status == discord.Status.online:
             user.online.set()
             logging.info(f'{after.name} is now online')
         elif before.status == discord.Status.online and after.status != discord.Status.online:
@@ -70,27 +70,26 @@ class Teacher(commands.Cog):
 
     @commands.command()
     async def register(self, ctx):
-        userid: int = ctx.author.id
-        if userid in self.users.keys():
+        if self.is_user(ctx):
             await ctx.send(f'{ctx.author.name} is already registered.')
             return
 
         user = User(ctx.author, self)
-        member = await commands.MemberConverter().convert(ctx, str(userid)) # discord.py can only fetch status for members
+        member = await commands.MemberConverter().convert(ctx, str(user.id)) # discord.py can only fetch status for members
         if member.status == discord.Status.online:
             user.online.set()
 
         await user.send('Welcome to the training program. Whenever you are online new exercises will be sent.')
         logging.info(f"Registered {user.name} successfully.")
-        self.users[userid] = user
+        self.users[user.id] = user
 
     @commands.command()
     async def unregister(self, ctx):
-        userid: int = ctx.author.id
-        if userid not in self.users.keys():
+        if not self.is_user(ctx):
             await ctx.send(f'{ctx.author.name} is not registered.')
             return
 
+        userid: int = ctx.author.id
         user = self.users[userid]
         del self.users[userid]
 
@@ -121,6 +120,7 @@ class User:
             await asyncio.sleep(self.interval)
 
     def __del__(self):
+        logging.info("Cleaning up user tasks")
         self.task.cancel()
 
     def __getattr__(self, attr):
